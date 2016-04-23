@@ -76,11 +76,13 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
     private static final int MSG_UPDATE_TIME = 0;
 
     private static final int MSG_LOAD_WEATHER = 0;
-    public static final String ACTION_WEATHER_CHANGED = "com.geaden.android.sunshine.wearable.ACTION_WEATHER_CHANGED";
+    public static final String ACTION_WEATHER_RECEIVED = "com.geaden.android.sunshine.wearable.ACTION_WEATHER_RECEIVED";
 
     public static final String EXTRA_HI = "extra_hi";
     public static final String EXTRA_LO = "extra_lo";
     public static final String EXTRA_ART = "extra_art";
+    private static final String TEMPERATURE_PLACEHOLDER = "-";
+    public static final String ACTION_REQUEST_WEATHER = "com.geaden.android.sunshine.wearable.ACTION_REQUEST_WEATHER";
 
     @Override
     public Engine onCreateEngine() {
@@ -125,6 +127,7 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
         Paint mHiPaint;
         Paint mLoPaint;
         float mColonWidth;
+        float mPadding;
 
         // Actual data
         float mLoTemp;
@@ -133,6 +136,9 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
 
         boolean mAmbient;
         boolean mBurnInProtection;
+
+        // Indicator whether we got data from phone.
+        boolean mWeatherReceived = false;
 
         /**
          * Handles time zone and locale changes.
@@ -152,13 +158,14 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
             @Override
             public void onReceive(Context context, Intent intent) {
                 Log.d("mWeatherChangeReceiver", intent.getAction());
-                if (intent.getAction().equals(ACTION_WEATHER_CHANGED)) {
+                if (intent.getAction().equals(ACTION_WEATHER_RECEIVED)) {
                     Log.d("mWeatherChangeReceiver", "Weather Changed");
                     mHiTemp = intent.getFloatExtra(EXTRA_HI, 0f);
                     mLoTemp = intent.getFloatExtra(EXTRA_LO, 0f);
                     byte[] bytes = intent.getByteArrayExtra(EXTRA_ART);
                     mBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
                     // Display results.
+                    mWeatherReceived = true;
                     invalidate();
                 }
             }
@@ -193,6 +200,7 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
                     .build());
             Resources resources = SunshineWatchFaceService.this.getResources();
             mYOffset = resources.getDimension(R.dimen.digital_y_offset);
+            mPadding = resources.getDimension(R.dimen.digital_temp_padding);
 
             mBackgroundPaint = new Paint();
             mBackgroundPaint.setColor(ContextCompat.getColor(SunshineWatchFaceService.this,
@@ -228,6 +236,11 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
 
             mCalendar = Calendar.getInstance();
             mDate = new Date();
+
+            // Request weather data from handheld device.
+            Intent intent = new Intent(SunshineWatchFaceService.this, WeatherRequestService.class);
+            intent.setAction(ACTION_REQUEST_WEATHER);
+            startService(intent);
         }
 
         @Override
@@ -288,7 +301,7 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
             }
             if (!mRegisteredWeatherChangeReceiver) {
                 mRegisteredWeatherChangeReceiver = true;
-                IntentFilter weatherFilter = new IntentFilter(ACTION_WEATHER_CHANGED);
+                IntentFilter weatherFilter = new IntentFilter(ACTION_WEATHER_RECEIVED);
                 LocalBroadcastManager.getInstance(SunshineWatchFaceService.this)
                         .registerReceiver(mWeatherChangeReceiver, weatherFilter);
             }
@@ -465,16 +478,20 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
             }
 
             // Temperature
-            float tempX = 0;
+            float tempX;
 
             y += 0.5f * mLineHeight;
 
-            String hiTempString = getString(R.string.format_temperature, mHiTemp);
-            String loTempString = getString(R.string.format_temperature, mLoTemp);
+            // If no data received just show placeholders for the temperature.
+            String hiTempString = mWeatherReceived ? getString(R.string.format_temperature, mHiTemp) :
+                    TEMPERATURE_PLACEHOLDER;
+            String loTempString = mWeatherReceived ? getString(R.string.format_temperature, mLoTemp) :
+                    TEMPERATURE_PLACEHOLDER;
 
-            if (!isInAmbientMode() && null != mBitmap && getPeekCardPosition().isEmpty()) {
-                tempX = getStartOfLine(bounds, mArtSize + mHiPaint.measureText(hiTempString)
-                        + mLoPaint.measureText(loTempString));
+            // Only draw weather art if not in ambient mode and we actually have the data.
+            if (!isInAmbientMode() && null != mBitmap) {
+                tempX = getStartOfLine(bounds, mArtSize + mPadding + mHiPaint.measureText(hiTempString)
+                        + mPadding + mLoPaint.measureText(loTempString));
                 BitmapFactory.Options options = new BitmapFactory.Options();
                 options.inPreferredConfig = Bitmap.Config.ARGB_8888;
                 int width = mBitmap.getWidth();
@@ -486,9 +503,9 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
                 // recreate the new Bitmap
                 Bitmap resizedArt = Bitmap.createBitmap(mBitmap, 0, 0, width, height, matrix, false);
                 canvas.drawBitmap(resizedArt, tempX, y, mLinePaint);
-                tempX += resizedArt.getWidth();
+                tempX += resizedArt.getWidth() + mPadding;
             } else {
-                tempX = getStartOfLine(bounds, mHiPaint.measureText(hiTempString)
+                tempX = getStartOfLine(bounds, mHiPaint.measureText(hiTempString) + mPadding
                         + mLoPaint.measureText(hiTempString));
             }
 
@@ -497,7 +514,7 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
             if (getPeekCardPosition().isEmpty()) {
                 y += mLineHeight;
                 canvas.drawText(hiTempString, tempX, y, mHiPaint);
-                tempX += mHiPaint.measureText(hiTempString);
+                tempX += mHiPaint.measureText(hiTempString) + mPadding;
                 canvas.drawText(loTempString, tempX, y, mLoPaint);
             }
         }

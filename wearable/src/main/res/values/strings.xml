@@ -1,8 +1,4 @@
-<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<resources>
     <string name="app_name">Sunshine</string>
-
     <string name="sunshine_digital_name">Sunshine</string>
-
-    <!-- Temperature format [CHAR LIMIT=5 -->
-    <string name="format_temperature"><xliff:g id="temp">%1.0f</xliff:g>\u00B0</string>
 </resources>
