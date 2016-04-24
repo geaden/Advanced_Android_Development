@@ -384,9 +384,7 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
      */
     private void updateWearable() {
         Log.d(LOG_TAG, "Updating wearable with weather data from SyncAdapter.");
-        Intent intent = new Intent(getContext(), SendWeatherDataService.class);
-        intent.setAction(SendWeatherDataService.ACTION_SEND_WEATHER_DATA);
-        getContext().startService(intent);
+        SendWeatherDataService.launchService(getContext());
     }
 
     private void notifyWeather() {

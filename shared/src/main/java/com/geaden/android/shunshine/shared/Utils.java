@@ -55,4 +55,14 @@ public final class Utils {
         }
         return null;
     }
+
+    /**
+     * Converts temperate to imperial units (Celsius to Fahrenheit).
+     *
+     * @param temperature the temperature to be converted.
+     * @return converted unit.
+     */
+    public static double convertToImperial(double temperature) {
+        return (temperature * 1.8) + 32;
+    }
 }

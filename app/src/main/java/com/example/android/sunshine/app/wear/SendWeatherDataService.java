@@ -37,6 +37,17 @@ public class SendWeatherDataService extends IntentService {
         super("SendWeatherDataService");
     }
 
+    /**
+     * Helper method that allows to initiate sending weather data to the wearables.
+     *
+     * @param context the context.
+     */
+    public static void launchService(Context context) {
+        Intent intent = new Intent(context, SendWeatherDataService.class);
+        intent.setAction(ACTION_SEND_WEATHER_DATA);
+        context.startService(intent);
+    }
+
     // The projection with required for wearables data.
     private static final String[] WEARABLE_WEATHER_PROJECTION = new String[]{
             WeatherContract.WeatherEntry.COLUMN_WEATHER_ID,
@@ -74,14 +85,16 @@ public class SendWeatherDataService extends IntentService {
 
                         PutDataMapRequest putDataMapReq = PutDataMapRequest.create(Constants.WEATHER_PATH);
                         putDataMapReq.setUrgent();
-                        putDataMapReq.getDataMap().putFloat(Constants.EXTRA_HIGH_TEMP, (float) high);
-                        putDataMapReq.getDataMap().putFloat(Constants.EXTRA_LOW_TEMP, (float) low);
+                        putDataMapReq.getDataMap().putDouble(Constants.EXTRA_HIGH_TEMP, high);
+                        putDataMapReq.getDataMap().putDouble(Constants.EXTRA_LOW_TEMP, low);
+                        putDataMapReq.getDataMap().putBoolean(Constants.EXTRA_UNITS_METRIC,
+                                Utility.isMetric(SendWeatherDataService.this));
                         putDataMapReq.getDataMap().putAsset(Constants.EXTRA_ART,
                                 Utils.createAssetFromBitmap(art));
 
                         if (BuildConfig.DEBUG) {
                             // For debug purposes only.
-                            putDataMapReq.getDataMap().putLong("time", System.currentTimeMillis());
+                            putDataMapReq.getDataMap().putLong(Constants.EXTRA_TIME, System.currentTimeMillis());
                         }
 
                         PutDataRequest putDataReq = putDataMapReq.asPutDataRequest();

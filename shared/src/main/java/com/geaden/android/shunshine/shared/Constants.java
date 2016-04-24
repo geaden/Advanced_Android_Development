@@ -6,7 +6,6 @@ package com.geaden.android.shunshine.shared;
  * @author Gennady Denisov
  */
 public final class Constants {
-
     private Constants() {
 
     }
@@ -16,7 +15,7 @@ public final class Constants {
     public static final String EXTRA_LOW_TEMP = "extra_low_temp";
     public static final String EXTRA_ART = "extra_art";
     public static final String EXTRA_TIME = "extra_time";
-    public static final String EXTRA_REQUEST_WEATHER = "extra_request_weather";
+    public static final String EXTRA_UNITS_METRIC = "extra_units";
 
     // Wear Data API path
     public static final String WEATHER_PATH = "/weather";

@@ -1,6 +1,5 @@
 package com.example.android.sunshine.app.wear;
 
-import android.content.Intent;
 import android.util.Log;
 
 import com.geaden.android.shunshine.shared.Constants;
@@ -20,9 +19,7 @@ public class WeatherRequestListenerService extends WearableListenerService {
         super.onMessageReceived(messageEvent);
         if (messageEvent.getPath().equals(Constants.WEATHER_REQUEST_PATH)) {
             Log.d(TAG, "Message to update weather and send it to the wearable received!");
-            Intent intent = new Intent(this, SendWeatherDataService.class);
-            intent.setAction(SendWeatherDataService.ACTION_SEND_WEATHER_DATA);
-            startService(intent);
+            SendWeatherDataService.launchService(this);
         }
     }
 }

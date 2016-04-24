@@ -55,34 +55,36 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
 
     private static final String SANS_SERIF_CONDENSED = "sans-serif-condensed";
 
+    private static final String SANS_SERIF_LIGHT = "sans-serif-light";
+
     private static final Typeface NORMAL_TYPEFACE =
-            Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL);
+            Typeface.create(SANS_SERIF_LIGHT, Typeface.NORMAL);
 
     private static final Typeface CONDENSED_TYPEFACE =
             Typeface.create(SANS_SERIF_CONDENSED, Typeface.NORMAL);
 
     private static final Typeface BOLD_TYPEFACE =
-            Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD);
+            Typeface.create(SANS_SERIF_LIGHT, Typeface.BOLD);
 
     /**
      * Update rate in milliseconds for interactive mode. We update once a second since seconds are
      * displayed in interactive mode.
      */
-    private static final long INTERACTIVE_UPDATE_RATE_MS = TimeUnit.SECONDS.toMillis(1);
+    private static final long INTERACTIVE_UPDATE_RATE_MS = TimeUnit.MILLISECONDS.toMillis(500);
 
     /**
      * Handler message id for updating the time periodically in interactive mode.
      */
     private static final int MSG_UPDATE_TIME = 0;
 
-    private static final int MSG_LOAD_WEATHER = 0;
+    public static final String ACTION_REQUEST_WEATHER = "com.geaden.android.sunshine.wearable.ACTION_REQUEST_WEATHER";
     public static final String ACTION_WEATHER_RECEIVED = "com.geaden.android.sunshine.wearable.ACTION_WEATHER_RECEIVED";
 
     public static final String EXTRA_HI = "extra_hi";
     public static final String EXTRA_LO = "extra_lo";
     public static final String EXTRA_ART = "extra_art";
+
     private static final String TEMPERATURE_PLACEHOLDER = "-";
-    public static final String ACTION_REQUEST_WEATHER = "com.geaden.android.sunshine.wearable.ACTION_REQUEST_WEATHER";
 
     @Override
     public Engine onCreateEngine() {
@@ -129,9 +131,9 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
         float mColonWidth;
         float mPadding;
 
-        // Actual data
-        float mLoTemp;
-        float mHiTemp;
+        // Actual weather data
+        double mLoTemp;
+        double mHiTemp;
         Bitmap mBitmap;
 
         boolean mAmbient;
@@ -160,8 +162,8 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
                 Log.d("mWeatherChangeReceiver", intent.getAction());
                 if (intent.getAction().equals(ACTION_WEATHER_RECEIVED)) {
                     Log.d("mWeatherChangeReceiver", "Weather Changed");
-                    mHiTemp = intent.getFloatExtra(EXTRA_HI, 0f);
-                    mLoTemp = intent.getFloatExtra(EXTRA_LO, 0f);
+                    mHiTemp = intent.getDoubleExtra(EXTRA_HI, 0.0);
+                    mLoTemp = intent.getDoubleExtra(EXTRA_LO, 0.0);
                     byte[] bytes = intent.getByteArrayExtra(EXTRA_ART);
                     mBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
                     // Display results.
@@ -171,7 +173,6 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
             }
         };
 
-        float mXOffset;
         float mYOffset;
 
         /**
@@ -215,24 +216,27 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
 
             // Colon text paint.
             mColonPaint = createTextPaint(ContextCompat.getColor(SunshineWatchFaceService.this,
-                    R.color.digital_text), BOLD_TYPEFACE);
+                    R.color.digital_text));
 
             // Minutes text paint.
-            mMinutePaint = createTextPaint(ContextCompat.getColor(SunshineWatchFaceService.this, R.color.digital_text));
+            mMinutePaint = createTextPaint(ContextCompat.getColor(SunshineWatchFaceService.this,
+                    R.color.digital_text));
 
             // Date text paint.
-            mDatePaint = createTextPaint(ContextCompat.getColor(SunshineWatchFaceService.this, R.color.digital_text),
-                    CONDENSED_TYPEFACE);
+            mDatePaint = createTextPaint(ContextCompat.getColor(SunshineWatchFaceService.this,
+                    R.color.digital_date), CONDENSED_TYPEFACE);
 
             // Line paint.
             mLinePaint = createTextPaint(ContextCompat.getColor(SunshineWatchFaceService.this,
-                    R.color.digital_text));
+                    R.color.digital_decor_line));
 
             // Hi text paint.
-            mHiPaint = createTextPaint(ContextCompat.getColor(SunshineWatchFaceService.this, R.color.digital_text), BOLD_TYPEFACE);
+            mHiPaint = createTextPaint(ContextCompat.getColor(SunshineWatchFaceService.this,
+                    R.color.digital_text), BOLD_TYPEFACE);
 
             // Lo text paint.
-            mLoPaint = createTextPaint(ContextCompat.getColor(SunshineWatchFaceService.this, R.color.digital_text));
+            mLoPaint = createTextPaint(ContextCompat.getColor(SunshineWatchFaceService.this,
+                    R.color.digital_lo_temp));
 
             mCalendar = Calendar.getInstance();
             mDate = new Date();
@@ -326,10 +330,6 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
             // Load resources that have alternate values for round watches.
             Resources resources = SunshineWatchFaceService.this.getResources();
 
-            mXOffset = resources.getDimension(R.dimen.digital_x_offset);
-
-            float textSize = resources.getDimension(R.dimen.digital_text_size);
-
             // Text size for time.
             float timeTextSize = resources.getDimension(R.dimen.digital_time_text_size);
             // Text size for date.
@@ -374,7 +374,6 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
                             mColonPaint,
                             mMinutePaint,
                             mDatePaint,
-                            mLinePaint,
                             mHiPaint,
                             mLoPaint
                     }) {
@@ -473,14 +472,14 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
             // Draw a line
             if (!isInAmbientMode()) {
                 x = getStartOfLine(bounds, mDecorLineLength);
-                y += mLineHeight;
+                y += 0.75f * mLineHeight;
                 canvas.drawLine(x, y, x + mDecorLineLength, y, mLinePaint);
             }
 
             // Temperature
             float tempX;
 
-            y += 0.5f * mLineHeight;
+            y += 0.25f * mLineHeight;
 
             // If no data received just show placeholders for the temperature.
             String hiTempString = mWeatherReceived ? getString(R.string.format_temperature, mHiTemp) :
@@ -512,7 +511,7 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
             // Only render the temperature if there is no peek card, so they do not bleed
             // into each other in ambient mode.
             if (getPeekCardPosition().isEmpty()) {
-                y += mLineHeight;
+                y += 1.15f * mLineHeight;
                 canvas.drawText(hiTempString, tempX, y, mHiPaint);
                 tempX += mHiPaint.measureText(hiTempString) + mPadding;
                 canvas.drawText(loTempString, tempX, y, mLoPaint);

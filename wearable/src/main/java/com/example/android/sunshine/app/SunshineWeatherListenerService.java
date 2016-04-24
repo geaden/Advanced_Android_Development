@@ -49,10 +49,11 @@ public class SunshineWeatherListenerService extends WearableListenerService {
                     public void executeAction(GoogleApiClient googleApiClient) {
                         DataMapItem dataMapItem = DataMapItem.fromDataItem(event.getDataItem());
                         Asset artAsset = dataMapItem.getDataMap().getAsset(Constants.EXTRA_ART);
-                        float hi = dataMapItem.getDataMap().getFloat(Constants.EXTRA_HIGH_TEMP);
-                        float lo = dataMapItem.getDataMap().getFloat(Constants.EXTRA_LOW_TEMP);
+                        double hi = dataMapItem.getDataMap().getDouble(Constants.EXTRA_HIGH_TEMP);
+                        double lo = dataMapItem.getDataMap().getDouble(Constants.EXTRA_LOW_TEMP);
+                        boolean isMetric = dataMapItem.getDataMap().getBoolean(Constants.EXTRA_UNITS_METRIC);
                         Bitmap bitmap = Utils.loadBitmapFromAsset(googleApiClient, artAsset);
-                        updateWatchFaceWeatherInfo(hi, lo, bitmap);
+                        updateWatchFaceWeatherInfo(hi, lo, isMetric, bitmap);
                     }
                 }.wrap();
             }
@@ -62,13 +63,21 @@ public class SunshineWeatherListenerService extends WearableListenerService {
     /**
      * Updates weather info on the watch face.
      *
-     * @param hi     max temperature.
-     * @param lo     min temperature.
-     * @param bitmap art based on weather.
+     * @param hi       max temperature.
+     * @param lo       min temperature.
+     * @param isMetric indicates whether units in Celsius of in Fahrenheits.
+     * @param bitmap   art based on weather.
      */
-    private void updateWatchFaceWeatherInfo(float hi, float lo, Bitmap bitmap) {
+    private void updateWatchFaceWeatherInfo(double hi, double lo, boolean isMetric, Bitmap bitmap) {
         Log.d(TAG, "Updating wearable weather info");
         Intent intent = new Intent(SunshineWatchFaceService.ACTION_WEATHER_RECEIVED);
+
+        // Temperature is in Celsius by default. If unit changed, do transformation.
+        if (!isMetric) {
+            hi = Utils.convertToImperial(hi);
+            lo = Utils.convertToImperial(lo);
+        }
+
         intent.putExtra(SunshineWatchFaceService.EXTRA_HI, hi);
         intent.putExtra(SunshineWatchFaceService.EXTRA_LO, lo);
         ByteArrayOutputStream bs = new ByteArrayOutputStream();
